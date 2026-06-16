@@ -1,5 +1,5 @@
 -- =========================================================================
--- EMLOXA WARE ULTRA PREMIUM UI v2.0
+-- EMLOXA WARE ULTRA PREMIUM UI v2.0 FIXED
 -- FULL ANIMATED | GLASS MORPHISM | PARTICLE EFFECTS | SMOOTH AS BUTTER
 -- =========================================================================
 
@@ -18,7 +18,7 @@ local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
 -- ══════════════════════════════════════════════════════════════════════
--- ANIMATION PRESETS
+-- ANIMATION PRESETS (FIXED)
 -- ══════════════════════════════════════════════════════════════════════
 local Animations = {
     Fast = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -26,7 +26,6 @@ local Animations = {
     Smooth = TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     Bounce = TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
     Elastic = TweenInfo.new(0.8, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out),
-    Spring = TweenInfo.new(0.45, Enum.EasingStyle.Spring, Enum.EasingDirection.Out),
 }
 
 -- ══════════════════════════════════════════════════════════════════════
@@ -157,26 +156,32 @@ local function Shadow(parent, size, offset, transparency, color)
         Size = size or UDim2.new(1, 30, 1, 30),
         Position = offset and UDim2.new(0, offset, 0, offset) or UDim2.new(0, -15, 0, -15),
         BackgroundTransparency = 1,
-        ZIndex = -1,
+        ZIndex = 0,
         Parent = parent
     })
 end
 
 local function Blur(parent, size)
-    local blur = CreateInstance("ImageLabel", {
+    local blur = CreateInstance("Frame", {
         Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Image = "rbxasset://textures/ui/GuiImagePlaceholder.png",
-        ImageTransparency = 0.95,
-        ScaleType = Enum.ScaleType.Tile,
-        TileSize = UDim2.new(0, size or 100, 0, size or 100),
+        BackgroundColor3 = CurrentTheme.Background,
+        BackgroundTransparency = 0.98,
+        BorderSizePixel = 0,
+        ZIndex = 0,
         Parent = parent
     })
     
-    CreateInstance("UICorner", {
-        CornerRadius = UDim.new(0, 12),
-        Parent = blur
-    })
+    Corner(blur, 12)
+    
+    local gradient = Gradient(blur, {
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(1, CurrentTheme.Primary)
+    }, 45)
+    
+    gradient.Transparency = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, 0.99),
+        NumberSequenceKeypoint.new(1, 0.95)
+    }
     
     return blur
 end
@@ -185,26 +190,31 @@ local function Ripple(button, color)
     button.ClipsDescendants = true
     
     button.MouseButton1Down:Connect(function()
+        local mousePos = UserInputService:GetMouseLocation()
+        local buttonPos = button.AbsolutePosition
+        local relativePos = Vector2.new(mousePos.X - buttonPos.X, mousePos.Y - buttonPos.Y)
+        
         local ripple = CreateInstance("Frame", {
             Size = UDim2.new(0, 0, 0, 0),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
+            Position = UDim2.new(0, relativePos.X, 0, relativePos.Y),
             AnchorPoint = Vector2.new(0.5, 0.5),
             BackgroundColor3 = color or CurrentTheme.Primary,
             BackgroundTransparency = 0.5,
             ZIndex = 999,
+            BorderSizePixel = 0,
             Parent = button
         })
         
         Corner(ripple, 1000)
         
-        local size = math.max(button.AbsoluteSize.X, button.AbsoluteSize.Y) * 2
+        local size = math.max(button.AbsoluteSize.X, button.AbsoluteSize.Y) * 2.5
         
-        TweenService:Create(ripple, Animations.Medium, {
+        TweenService:Create(ripple, TweenInfo.new(0.6, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
             Size = UDim2.new(0, size, 0, size),
             BackgroundTransparency = 1
         }):Play()
         
-        task.delay(0.5, function()
+        task.delay(0.6, function()
             ripple:Destroy()
         end)
     end)
@@ -219,12 +229,12 @@ local function Particles(parent)
         Parent = parent
     })
     
-    for i = 1, 20 do
+    for i = 1, 15 do
         local particle = CreateInstance("Frame", {
-            Size = UDim2.new(0, math.random(2, 4), 0, math.random(2, 4)),
+            Size = UDim2.new(0, math.random(2, 5), 0, math.random(2, 5)),
             Position = UDim2.new(math.random(0, 100) / 100, 0, math.random(0, 100) / 100, 0),
             BackgroundColor3 = CurrentTheme.Primary,
-            BackgroundTransparency = math.random(30, 70) / 100,
+            BackgroundTransparency = math.random(40, 80) / 100,
             BorderSizePixel = 0,
             ZIndex = 0,
             Parent = particles
@@ -232,22 +242,29 @@ local function Particles(parent)
         
         Corner(particle, 100)
         
-        local function animate()
-            local randomX = math.random(-50, 50)
-            local randomY = math.random(-50, 50)
-            
-            TweenService:Create(particle, TweenInfo.new(
-                math.random(3, 6),
-                Enum.EasingStyle.Linear,
-                Enum.EasingDirection.InOut,
-                -1,
-                true
-            ), {
-                Position = particle.Position + UDim2.new(0, randomX, 0, randomY)
-            }):Play()
-        end
-        
-        task.spawn(animate)
+        task.spawn(function()
+            while particle.Parent do
+                local randomX = math.random(-30, 30)
+                local randomY = math.random(-30, 30)
+                local currentPos = particle.Position
+                
+                TweenService:Create(particle, TweenInfo.new(
+                    math.random(4, 8),
+                    Enum.EasingStyle.Sine,
+                    Enum.EasingDirection.InOut
+                ), {
+                    Position = UDim2.new(
+                        math.clamp(currentPos.X.Scale + randomX / 1000, 0, 1),
+                        0,
+                        math.clamp(currentPos.Y.Scale + randomY / 1000, 0, 1),
+                        0
+                    ),
+                    BackgroundTransparency = math.random(40, 80) / 100
+                }):Play()
+                
+                task.wait(math.random(4, 8))
+            end
+        end)
     end
     
     return particles
@@ -326,7 +343,7 @@ function EmloxaLibrary:CreateWindow(title)
         Parent = LoadingScreen
     })
     
-    -- Animated Logo Ring
+    -- Animated Logo Rings
     local LogoRing = CreateInstance("Frame", {
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
@@ -335,34 +352,56 @@ function EmloxaLibrary:CreateWindow(title)
     
     for i = 1, 3 do
         local ring = CreateInstance("Frame", {
-            Size = UDim2.new(1, 0, 1, 0),
+            Size = UDim2.new(0.8 + i * 0.1, 0, 0.8 + i * 0.1, 0),
             Position = UDim2.new(0.5, 0, 0.5, 0),
             AnchorPoint = Vector2.new(0.5, 0.5),
             BackgroundTransparency = 1,
             Parent = LogoRing
         })
         
-        local ringStroke = Stroke(ring, CurrentTheme.Primary, 3, 0.5)
+        Stroke(ring, CurrentTheme.Primary, 3, 0.3 + i * 0.2)
         Corner(ring, 100)
         
-        TweenService:Create(ring, TweenInfo.new(
-            2 + i * 0.5,
-            Enum.EasingStyle.Linear,
-            Enum.EasingDirection.InOut,
-            -1
-        ), {
-            Rotation = 360
-        }):Play()
+        -- Rotation animation
+        task.spawn(function()
+            while ring.Parent do
+                TweenService:Create(ring, TweenInfo.new(
+                    3 + i * 0.5,
+                    Enum.EasingStyle.Linear,
+                    Enum.EasingDirection.InOut
+                ), {
+                    Rotation = i % 2 == 0 and 360 or -360
+                }):Play()
+                
+                task.wait(3 + i * 0.5)
+                ring.Rotation = 0
+            end
+        end)
         
-        TweenService:Create(ring, TweenInfo.new(
-            1.5,
-            Enum.EasingStyle.Sine,
-            Enum.EasingDirection.InOut,
-            -1,
-            true
-        ), {
-            Size = UDim2.new(1.2, 0, 1.2, 0)
-        }):Play()
+        -- Pulse animation
+        task.spawn(function()
+            while ring.Parent do
+                TweenService:Create(ring, TweenInfo.new(
+                    1.5,
+                    Enum.EasingStyle.Sine,
+                    Enum.EasingDirection.InOut
+                ), {
+                    Size = UDim2.new(0.9 + i * 0.1, 0, 0.9 + i * 0.1, 0)
+                }):Play()
+                
+                task.wait(1.5)
+                
+                TweenService:Create(ring, TweenInfo.new(
+                    1.5,
+                    Enum.EasingStyle.Sine,
+                    Enum.EasingDirection.InOut
+                ), {
+                    Size = UDim2.new(0.8 + i * 0.1, 0, 0.8 + i * 0.1, 0)
+                }):Play()
+                
+                task.wait(1.5)
+            end
+        end)
     end
     
     -- Logo Text
@@ -373,6 +412,7 @@ function EmloxaLibrary:CreateWindow(title)
         Font = Enum.Font.GothamBlack,
         TextSize = 100,
         TextColor3 = CurrentTheme.Primary,
+        ZIndex = 10001,
         Parent = LogoContainer
     })
     
@@ -393,10 +433,11 @@ function EmloxaLibrary:CreateWindow(title)
         Font = Enum.Font.GothamBlack,
         TextSize = 36,
         TextColor3 = CurrentTheme.Text,
+        ZIndex = 10001,
         Parent = LoadingScreen
     })
     
-    -- Loading Dots
+    -- Loading Dots Animation
     local LoadingDots = CreateInstance("TextLabel", {
         Size = UDim2.new(1, 0, 0, 30),
         Position = UDim2.new(0, 0, 0.72, 0),
@@ -405,6 +446,7 @@ function EmloxaLibrary:CreateWindow(title)
         Font = Enum.Font.GothamSemibold,
         TextSize = 18,
         TextColor3 = CurrentTheme.TextMuted,
+        ZIndex = 10001,
         Parent = LoadingScreen
     })
     
@@ -423,6 +465,7 @@ function EmloxaLibrary:CreateWindow(title)
         Position = UDim2.new(0.5, -200, 0.8, 0),
         BackgroundColor3 = CurrentTheme.Surface,
         BorderSizePixel = 0,
+        ZIndex = 10001,
         Parent = LoadingScreen
     })
     Corner(ProgressBarBg, 3)
@@ -431,6 +474,7 @@ function EmloxaLibrary:CreateWindow(title)
         Size = UDim2.new(0, 0, 1, 0),
         BackgroundColor3 = CurrentTheme.Primary,
         BorderSizePixel = 0,
+        ZIndex = 10002,
         Parent = ProgressBarBg
     })
     Corner(ProgressBar, 3)
@@ -444,12 +488,8 @@ function EmloxaLibrary:CreateWindow(title)
         Size = UDim2.new(1, 0, 1, 0)
     }):Play()
     
-    -- Remove loading screen after 2.5 seconds
+    -- Remove loading screen
     task.delay(2.5, function()
-        TweenService:Create(LoadingScreen, Animations.Medium, {
-            BackgroundTransparency = 1
-        }):Play()
-        
         for _, child in ipairs(LoadingScreen:GetDescendants()) do
             if child:IsA("TextLabel") then
                 TweenService:Create(child, Animations.Fast, {
@@ -467,6 +507,10 @@ function EmloxaLibrary:CreateWindow(title)
             end
         end
         
+        TweenService:Create(LoadingScreen, Animations.Medium, {
+            BackgroundTransparency = 1
+        }):Play()
+        
         task.wait(0.5)
         LoadingScreen:Destroy()
     end)
@@ -482,7 +526,7 @@ function EmloxaLibrary:CreateWindow(title)
         BackgroundColor3 = CurrentTheme.Background,
         BackgroundTransparency = 0.1,
         BorderSizePixel = 0,
-        ClipsDescendants = true,
+        ClipsDescendants = false,
         Active = true,
         Parent = ScreenGui
     })
@@ -490,13 +534,12 @@ function EmloxaLibrary:CreateWindow(title)
     Corner(MainWindow, 20)
     Stroke(MainWindow, CurrentTheme.Primary, 2)
     Shadow(MainWindow, UDim2.new(1, 60, 1, 60), -30, 0.7)
-    Blur(MainWindow, 100)
     
     RegisterTheme(MainWindow, {
         BackgroundColor3 = "Background"
     })
     
-    -- Glass morphism effect
+    -- Glass morphism layer
     local GlassMorph = CreateInstance("Frame", {
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundColor3 = CurrentTheme.Surface,
@@ -507,6 +550,15 @@ function EmloxaLibrary:CreateWindow(title)
     })
     Corner(GlassMorph, 20)
     
+    -- Content Container (clips descendants properly)
+    local ContentContainer = CreateInstance("Frame", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        ClipsDescendants = true,
+        Parent = MainWindow
+    })
+    Corner(ContentContainer, 20)
+    
     -- Animate window opening
     task.delay(2.5, function()
         TweenService:Create(MainWindow, Animations.Bounce, {
@@ -515,7 +567,7 @@ function EmloxaLibrary:CreateWindow(title)
     end)
     
     -- ══════════════════════════════════════════════════════════════════
-    -- TOP BAR (ULTRA ANIMATED)
+    -- TOP BAR
     -- ══════════════════════════════════════════════════════════════════
     
     local TopBar = CreateInstance("Frame", {
@@ -523,7 +575,7 @@ function EmloxaLibrary:CreateWindow(title)
         BackgroundColor3 = CurrentTheme.Surface,
         BackgroundTransparency = 0.3,
         BorderSizePixel = 0,
-        Parent = MainWindow
+        Parent = ContentContainer
     })
     
     Corner(TopBar, 20)
@@ -541,7 +593,7 @@ function EmloxaLibrary:CreateWindow(title)
     RegisterTheme(TopBar, {BackgroundColor3 = "Surface"})
     RegisterTheme(TopBarCover, {BackgroundColor3 = "Surface"})
     
-    -- Animated Gradient on Top Bar
+    -- Animated gradient
     local TopBarGradient = Gradient(TopBar, {
         ColorSequenceKeypoint.new(0, CurrentTheme.Primary),
         ColorSequenceKeypoint.new(0.5, CurrentTheme.Secondary),
@@ -550,10 +602,11 @@ function EmloxaLibrary:CreateWindow(title)
     
     task.spawn(function()
         while TopBar.Parent do
-            TweenService:Create(TopBarGradient, TweenInfo.new(3, Enum.EasingStyle.Linear), {
-                Rotation = TopBarGradient.Rotation + 360
+            local currentRotation = TopBarGradient.Rotation
+            TweenService:Create(TopBarGradient, TweenInfo.new(4, Enum.EasingStyle.Linear), {
+                Rotation = currentRotation + 360
             }):Play()
-            task.wait(3)
+            task.wait(4)
         end
     end)
     
@@ -578,17 +631,21 @@ function EmloxaLibrary:CreateWindow(title)
         Parent = LogoIcon
     })
     
-    -- Pulsing animation on logo
+    -- Pulsing animation
     task.spawn(function()
         while LogoIcon.Parent do
-            TweenService:Create(LogoIcon, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+            TweenService:Create(LogoIcon, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
                 Size = UDim2.new(0, 44, 0, 44)
             }):Play()
-            task.wait(2)
+            task.wait(1.5)
+            TweenService:Create(LogoIcon, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                Size = UDim2.new(0, 40, 0, 40)
+            }):Play()
+            task.wait(1.5)
         end
     end)
     
-    -- Title Text
+    -- Title
     local TitleText = CreateInstance("TextLabel", {
         Size = UDim2.new(0, 400, 1, 0),
         Position = UDim2.new(0, 65, 0, 0),
@@ -603,7 +660,7 @@ function EmloxaLibrary:CreateWindow(title)
     
     RegisterTheme(TitleText, {TextColor3 = "Text"})
     
-    -- Rainbow title effect
+    -- Rainbow title
     task.spawn(function()
         while TitleText.Parent do
             TitleText.TextColor3 = Color3.fromHSV((tick() * 0.3) % 1, 0.8, 1)
@@ -634,7 +691,7 @@ function EmloxaLibrary:CreateWindow(title)
     
     RegisterTheme(CreditsText, {TextColor3 = "Accent"})
     
-    -- Window Controls
+    -- Controls
     local ControlsContainer = CreateInstance("Frame", {
         Size = UDim2.new(0, 120, 1, 0),
         Position = UDim2.new(1, -130, 0, 0),
@@ -642,7 +699,7 @@ function EmloxaLibrary:CreateWindow(title)
         Parent = TopBar
     })
     
-    local function CreateControlButton(text, position, color, hoverColor)
+    local function CreateControlButton(text, position, color)
         local button = CreateInstance("TextButton", {
             Size = UDim2.new(0, 38, 0, 38),
             Position = position,
@@ -663,14 +720,15 @@ function EmloxaLibrary:CreateWindow(title)
         
         button.MouseEnter:Connect(function()
             TweenService:Create(button, Animations.Fast, {
-                BackgroundColor3 = hoverColor,
+                BackgroundColor3 = color,
                 TextColor3 = Color3.new(1, 1, 1),
                 Size = UDim2.new(0, 42, 0, 42)
             }):Play()
             
-            TweenService:Create(button:FindFirstChildOfClass("UIStroke"), Animations.Fast, {
-                Transparency = 0
-            }):Play()
+            local stroke = button:FindFirstChildOfClass("UIStroke")
+            if stroke then
+                TweenService:Create(stroke, Animations.Fast, {Transparency = 0}):Play()
+            end
         end)
         
         button.MouseLeave:Connect(function()
@@ -680,16 +738,17 @@ function EmloxaLibrary:CreateWindow(title)
                 Size = UDim2.new(0, 38, 0, 38)
             }):Play()
             
-            TweenService:Create(button:FindFirstChildOfClass("UIStroke"), Animations.Fast, {
-                Transparency = 0.5
-            }):Play()
+            local stroke = button:FindFirstChildOfClass("UIStroke")
+            if stroke then
+                TweenService:Create(stroke, Animations.Fast, {Transparency = 0.5}):Play()
+            end
         end)
         
         return button
     end
     
-    local MinimizeButton = CreateControlButton("─", UDim2.new(0, 0, 0.5, -19), CurrentTheme.Warning, CurrentTheme.Warning)
-    local CloseButton = CreateControlButton("✕", UDim2.new(0, 52, 0.5, -19), CurrentTheme.Error, CurrentTheme.Error)
+    local MinimizeButton = CreateControlButton("─", UDim2.new(0, 0, 0.5, -19), CurrentTheme.Warning)
+    local CloseButton = CreateControlButton("✕", UDim2.new(0, 52, 0.5, -19), CurrentTheme.Error)
     
     local isMinimized = false
     
@@ -704,9 +763,9 @@ function EmloxaLibrary:CreateWindow(title)
     end)
     
     CloseButton.MouseButton1Click:Connect(function()
-        TweenService:Create(MainWindow, Animations.Bounce, {
+        TweenService:Create(MainWindow, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
             Size = UDim2.new(0, 0, 0, 0),
-            Rotation = 90
+            Rotation = 180
         }):Play()
         
         task.wait(0.6)
@@ -739,27 +798,24 @@ function EmloxaLibrary:CreateWindow(title)
     UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
             local delta = input.Position - dragStart
-            
-            TweenService:Create(MainWindow, TweenInfo.new(0.1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
-                Position = UDim2.new(
-                    startPos.X.Scale,
-                    startPos.X.Offset + delta.X,
-                    startPos.Y.Scale,
-                    startPos.Y.Offset + delta.Y
-                )
-            }):Play()
+            MainWindow.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
         end
     end)
     
     -- ══════════════════════════════════════════════════════════════════
-    -- TAB SYSTEM (ULTRA SMOOTH)
+    -- TAB SYSTEM
     -- ══════════════════════════════════════════════════════════════════
     
     local TabContainer = CreateInstance("Frame", {
         Size = UDim2.new(1, -40, 0, 50),
         Position = UDim2.new(0, 20, 0, 70),
         BackgroundTransparency = 1,
-        Parent = MainWindow
+        Parent = ContentContainer
     })
     
     local TabList = CreateInstance("UIListLayout", {
@@ -775,7 +831,7 @@ function EmloxaLibrary:CreateWindow(title)
         Position = UDim2.new(0, 20, 0, 130),
         BackgroundTransparency = 1,
         ClipsDescendants = true,
-        Parent = MainWindow
+        Parent = ContentContainer
     })
     
     local Tabs = {}
@@ -870,8 +926,8 @@ function EmloxaLibrary:CreateWindow(title)
             end
             
             for _, tab in ipairs(Tabs) do
-                local tabLabel = tab.Button:FindFirstChild("TextLabel")
-                local tabIcon = tab.Button:FindFirstChild("Frame")
+                local tabLabel = tab.Button:FindFirstChildOfClass("TextLabel")
+                local tabIcon = tab.Button:FindFirstChildOfClass("Frame")
                 local tabIndicator = tab.Indicator
                 
                 TweenService:Create(tabLabel, Animations.Fast, {
@@ -917,12 +973,12 @@ function EmloxaLibrary:CreateWindow(title)
         table.insert(Pages, Page)
         
         if #Tabs == 1 then
-            TabButton.MouseButton1Click()
+            task.delay(0.1, function()
+                TabButton.MouseButton1Click()
+            end)
         end
         
-        -- ══════════════════════════════════════════════════════════════
-        -- UI ELEMENTS
-        -- ══════════════════════════════════════════════════════════════
+        -- UI ELEMENTS (devamı bir sonraki mesajda)
         
         function Tab:CreateButton(name, callback)
             local ButtonFrame = CreateInstance("Frame", {
@@ -964,9 +1020,10 @@ function EmloxaLibrary:CreateWindow(title)
                     TextColor3 = Color3.new(1, 1, 1)
                 }):Play()
                 
-                TweenService:Create(ButtonFrame:FindFirstChildOfClass("UIStroke"), Animations.Fast, {
-                    Transparency = 0
-                }):Play()
+                local stroke = ButtonFrame:FindFirstChildOfClass("UIStroke")
+                if stroke then
+                    TweenService:Create(stroke, Animations.Fast, {Transparency = 0}):Play()
+                end
             end)
             
             Button.MouseLeave:Connect(function()
@@ -979,9 +1036,10 @@ function EmloxaLibrary:CreateWindow(title)
                     TextColor3 = CurrentTheme.Text
                 }):Play()
                 
-                TweenService:Create(ButtonFrame:FindFirstChildOfClass("UIStroke"), Animations.Fast, {
-                    Transparency = 0.7
-                }):Play()
+                local stroke = ButtonFrame:FindFirstChildOfClass("UIStroke")
+                if stroke then
+                    TweenService:Create(stroke, Animations.Fast, {Transparency = 0.7}):Play()
+                end
             end)
             
             Button.MouseButton1Click:Connect(function()
@@ -1159,8 +1217,7 @@ function EmloxaLibrary:CreateWindow(title)
             
             local SliderKnob = CreateInstance("Frame", {
                 Size = UDim2.new(0, 18, 0, 18),
-                Position = UDim2.new(0, -9, 0.5, -9),
-                AnchorPoint = Vector2.new(0, 0.5),
+                Position = UDim2.new(1, -9, 0.5, -9),
                 BackgroundColor3 = Color3.new(1, 1, 1),
                 BorderSizePixel = 0,
                 ZIndex = 2,
@@ -1453,6 +1510,12 @@ function EmloxaLibrary:CreateWindow(title)
             })
             
             RegisterTheme(Label, {TextColor3 = "TextMuted"})
+            
+            return {
+                SetText = function(newText)
+                    Label.Text = newText
+                end
+            }
         end
         
         function Tab:CreateDivider()
@@ -1472,7 +1535,7 @@ function EmloxaLibrary:CreateWindow(title)
     end
     
     -- ══════════════════════════════════════════════════════════════════
-    -- NOTIFICATIONS
+    -- NOTIFICATION SYSTEM
     -- ══════════════════════════════════════════════════════════════════
     
     function Window:Notify(title, message, duration, type)
@@ -1500,7 +1563,6 @@ function EmloxaLibrary:CreateWindow(title)
         Corner(NotifFrame, 12)
         Stroke(NotifFrame, color, 2)
         Shadow(NotifFrame, UDim2.new(1, 30, 1, 30), -15, 0.6)
-        Blur(NotifFrame, 80)
         
         local IconFrame = CreateInstance("Frame", {
             Size = UDim2.new(0, 50, 0, 50),
@@ -1573,7 +1635,7 @@ function EmloxaLibrary:CreateWindow(title)
     -- ══════════════════════════════════════════════════════════════════
     
     function Window:ShowDiscordPrompt()
-        task.delay(3, function()
+        task.delay(3.5, function()
             local PromptFrame = CreateInstance("Frame", {
                 Size = UDim2.new(0, 0, 0, 160),
                 Position = UDim2.new(1, 20, 1, -180),
@@ -1586,21 +1648,27 @@ function EmloxaLibrary:CreateWindow(title)
             Corner(PromptFrame, 16)
             Stroke(PromptFrame, CurrentTheme.Accent, 2)
             Shadow(PromptFrame, UDim2.new(1, 40, 1, 40), -20, 0.7)
-            Blur(PromptFrame, 100)
             Particles(PromptFrame)
             
-            local DiscordIcon = CreateInstance("TextLabel", {
+            local DiscordIcon = CreateInstance("Frame", {
                 Size = UDim2.new(0, 50, 0, 50),
                 Position = UDim2.new(0, 20, 0, 20),
                 BackgroundColor3 = Color3.fromRGB(88, 101, 242),
-                Text = "D",
-                Font = Enum.Font.GothamBlack,
-                TextSize = 28,
-                TextColor3 = Color3.new(1, 1, 1),
+                BorderSizePixel = 0,
                 Parent = PromptFrame
             })
             
             Corner(DiscordIcon, 12)
+            
+            local DiscordLetter = CreateInstance("TextLabel", {
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundTransparency = 1,
+                Text = "D",
+                Font = Enum.Font.GothamBlack,
+                TextSize = 28,
+                TextColor3 = Color3.new(1, 1, 1),
+                Parent = DiscordIcon
+            })
             
             local Title = CreateInstance("TextLabel", {
                 Size = UDim2.new(1, -90, 0, 25),
