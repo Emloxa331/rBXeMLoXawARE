@@ -1,7 +1,7 @@
 -- =========================================================================
 -- EMLOXA WARE: EVADE (PLACE ID: 9872472334)
 -- UISTROKE FIX | NO DIVIDERS | ULTIMATE CARRY & HUD CORE | REVIVE TP & NEXTBOT LOOP
--- PHYSICS OVERRIDE: TRUE FLY & RAW SPEED INCLUDED
+-- PHYSICS OVERRIDE: TRUE FLY, RAW SPEED, NOCLIP & HIPHEIGHT INCLUDED
 -- =========================================================================
 local GameModule = {}
 
@@ -33,7 +33,8 @@ function GameModule:Init(Window)
         Movement = { 
             SpeedEnabled = false, SpeedValue = 40, 
             FlyEnabled = false, FlySpeed = 50,
-            AutoBhop = false, EmoteDash = false
+            AutoBhop = false, EmoteDash = false,
+            Noclip = false, HipHeightEnabled = false, HipHeightValue = 2
         },
         CarrySystem = {
             AutoMode = false,
@@ -174,10 +175,26 @@ function GameModule:Init(Window)
     -- MENÜ SEKMELERİ
     -- ==========================================
     local MoveTab = Window:CreateTab("Movement")
+    
+    -- Speed & Fly
     MoveTab:CreateToggle("Enable True Speed", function(s) Settings.Movement.SpeedEnabled = s end)
     MoveTab:CreateSlider("Speed Velocity Value", 16, 200, 40, function(v) Settings.Movement.SpeedValue = v end)
     MoveTab:CreateToggle("Enable Fly Mode", function(s) Settings.Movement.FlyEnabled = s end)
     MoveTab:CreateSlider("Fly Velocity Value", 20, 200, 50, function(v) Settings.Movement.FlySpeed = v end)
+    
+    -- Noclip & HipHeight (YENİ EKLENENLER)
+    MoveTab:CreateToggle("Enable Noclip", function(s) Settings.Movement.Noclip = s end)
+    MoveTab:CreateToggle("Enable Custom HipHeight", function(s) 
+        Settings.Movement.HipHeightEnabled = s 
+        if not s then
+            local char = LocalPlayer.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if hum then hum.HipHeight = 2 end -- Kapatıldığında varsayılana döndür
+        end
+    end)
+    MoveTab:CreateSlider("HipHeight Value", 0, 50, 2, function(v) Settings.Movement.HipHeightValue = v end)
+    
+    -- Bhop & Dash
     MoveTab:CreateToggle("Auto Bhop (Hold Space)", function(s) Settings.Movement.AutoBhop = s end)
     MoveTab:CreateToggle("Emote Dash Spam (G + F)", function(s) Settings.Movement.EmoteDash = s end)
 
@@ -255,7 +272,10 @@ function GameModule:Init(Window)
         local char = LocalPlayer.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
             local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum then hum.PlatformStand = false end
+            if hum then 
+                hum.PlatformStand = false
+                hum.HipHeight = 2 -- Unload olurken varsayılana çevir
+            end
             if char.HumanoidRootPart:FindFirstChild("EmloxaVelocity") then char.HumanoidRootPart.EmloxaVelocity:Destroy() end
         end
         local ui = game:GetService("CoreGui"):FindFirstChild("EmloxaWareUI") or LocalPlayer.PlayerGui:FindFirstChild("EmloxaWareUI")
@@ -349,7 +369,21 @@ function GameModule:Init(Window)
         if hum and hrp then
             local bVel = hrp:FindFirstChild("EmloxaVelocity")
             
-            -- SPEED VE FLY MANTIĞI TAMAMEN YENİLENDİ VE EVADE FİZİĞİ EZİLDİ
+            -- NOCLIP MANTIĞI
+            if Settings.Movement.Noclip then
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CanCollide then
+                        part.CanCollide = false
+                    end
+                end
+            end
+
+            -- HIPHEIGHT MANTIĞI
+            if Settings.Movement.HipHeightEnabled then
+                hum.HipHeight = Settings.Movement.HipHeightValue
+            end
+            
+            -- SPEED VE FLY MANTIĞI
             if Settings.Movement.FlyEnabled then
                 if not bVel then
                     bVel = Instance.new("BodyVelocity")
@@ -372,7 +406,6 @@ function GameModule:Init(Window)
                 end
                 
                 if Settings.Movement.SpeedEnabled and hum.MoveDirection.Magnitude > 0 then
-                    -- Hızın Evade sürtünmesine takılmaması için BodyVelocity ile zorla
                     if not bVel then
                         bVel = Instance.new("BodyVelocity")
                         bVel.Name = "EmloxaVelocity"
@@ -411,7 +444,6 @@ function GameModule:Init(Window)
                 end
             end
             if TargetedNextbot and TargetedNextbot:FindFirstChild("Hitbox") then
-                -- Botun tam üstüne ışınla ki anında ölmesin, ama peşinde kalsın
                 hrp.CFrame = TargetedNextbot.Hitbox.CFrame + Vector3.new(0, 3, 0)
             end
         end
@@ -517,7 +549,7 @@ function GameModule:Init(Window)
                         if Settings.Exploits.ReviveTPDelay > 0 then
                             task.wait(Settings.Exploits.ReviveTPDelay)
                         else
-                            task.wait() -- 0 saniye seçilmişse frame atla ki buga girmesin
+                            task.wait()
                         end
                         
                         local curChar = LocalPlayer.Character
