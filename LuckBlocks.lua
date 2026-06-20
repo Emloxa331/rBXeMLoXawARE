@@ -1,5 +1,5 @@
 -- =========================================================================
--- EMLOXA WARE: LUCKY BLOCKS BATTLEGROUNDS MAXIMUM POWER MODULE v3
+-- EMLOXA WARE: LUCKY BLOCKS BATTLEGROUNDS MAXIMUM POWER MODULE v3.1 (MODDED)
 -- =========================================================================
 local GameModule = {}
 
@@ -94,13 +94,29 @@ function GameModule:Init(Window)
     end
 
     -- ==========================================
-    -- 3. ULTRA HIZLI DUPE SİSTEMİ
+    -- 3. ULTRA HIZLI DUPE SİSTEMİ (GELİŞTİRİLMİŞ)
     -- ==========================================
     local DupeTab = Window:CreateTab("Dupe Tool")
     local DupeTargetAmount = 10
     local DupeInProgress = false
+    
+    -- Çoklu Seçim (Multi-Select) Şans Bloğu Havuzu
+    local SelectedDupeBlocks = {
+        ["SpawnLuckyBlock"] = false,
+        ["SpawnSuperBlock"] = false,
+        ["SpawnDiamondBlock"] = false,
+        ["SpawnRainbowBlock"] = true, -- Varsayılan olarak Rainbow açık gelir
+        ["SpawnGalaxyBlock"] = false
+    }
 
-    DupeTab:CreateSlider("Target Dupe Amount", 1, 100, 10, function(value) DupeTargetAmount = value end)
+    DupeTab:CreateSlider("Target Dupe Amount", 1, 500, 10, function(value) DupeTargetAmount = value end)
+
+    -- Multi-Select Arayüzü (İstediklerini aynı anda açabilirsin)
+    DupeTab:CreateToggle("Use Lucky Block", function(state) SelectedDupeBlocks["SpawnLuckyBlock"] = state end)
+    DupeTab:CreateToggle("Use Super Block", function(state) SelectedDupeBlocks["SpawnSuperBlock"] = state end)
+    DupeTab:CreateToggle("Use Diamond Block", function(state) SelectedDupeBlocks["SpawnDiamondBlock"] = state end)
+    DupeTab:CreateToggle("Use Rainbow Block", function(state) SelectedDupeBlocks["SpawnRainbowBlock"] = state end)
+    DupeTab:CreateToggle("Use Galaxy Block", function(state) SelectedDupeBlocks["SpawnGalaxyBlock"] = state end)
 
     DupeTab:CreateButton("Start Dupe (Held Item)", function()
         if DupeInProgress then return end
@@ -114,49 +130,52 @@ function GameModule:Init(Window)
         print("[EMLOXA WARE] Ultra Fast Dupe Started for: " .. TargetItemName)
 
         task.spawn(function()
-            local timeout = 0
-            local lastOwned = 0
-
-            -- task.wait() ile oyun motorunun izin verdiği MAKSİMUM hıza çıkıldı
+            -- TIMEOUT (ZAMAN AŞIMI) TAMAMEN KALDIRILDI! Sadece hedefe ulaşınca veya durdurunca kapanır.
             while DupeInProgress do
+                local Char = LocalPlayer.Character
+                if not Char or not Char:FindFirstChild("HumanoidRootPart") then task.wait() continue end
+                
                 local totalOwned = 0
                 for _, item in pairs(LocalPlayer.Backpack:GetChildren()) do if item.Name == TargetItemName then totalOwned = totalOwned + 1 end end
-                for _, item in pairs(Character:GetChildren()) do if item:IsA("Tool") and item.Name == TargetItemName then totalOwned = totalOwned + 1 end end
+                for _, item in pairs(Char:GetChildren()) do if item:IsA("Tool") and item.Name == TargetItemName then totalOwned = totalOwned + 1 end end
                 
                 if totalOwned >= DupeTargetAmount then break end
 
-                -- AKILLI TIMEOUT: Eşya sayısı artıyorsa zaman aşımını sıfırla! Asla gereksiz yere kapanmaz.
-                if totalOwned > lastOwned then
-                    timeout = 0
-                    lastOwned = totalOwned
-                end
-                
-                if timeout > 300 then 
-                    print("[EMLOXA WARE] Dupe stopped due to inactivity (timeout).")
-                    break 
+                -- MULTI-SELECT: Seçilen tüm şans bloklarını aynı anda ve son hızda tetikler
+                for remoteName, isEnabled in pairs(SelectedDupeBlocks) do
+                    if isEnabled then
+                        local remote = ReplicatedStorage:FindFirstChild(remoteName)
+                        if remote then remote:FireServer() end
+                    end
                 end
 
-                local Rainbow = ReplicatedStorage:FindFirstChild("SpawnRainbowBlock")
-                if Rainbow then Rainbow:FireServer() end
-
+                -- Envanterdeki hedef eşyaları ele al, gereksizleri silerek gecikmeyi önler
                 for _, item in pairs(LocalPlayer.Backpack:GetChildren()) do
                     if item:IsA("Tool") then
-                        if item.Name == TargetItemName then item.Parent = Character 
-                        else item:Destroy() end
+                        if item.Name == TargetItemName then 
+                            item.Parent = Char 
+                        else 
+                            item:Destroy() 
+                        end
                     end
                 end
 
+                -- Yerden hedef eşyaları milisaniyeler içinde karakterin pozisyonuna ışınlar
+                local rootCFrame = Char.HumanoidRootPart.CFrame
                 for _, item in pairs(workspace:GetChildren()) do
                     if item:IsA("Tool") and item:FindFirstChild("Handle") then
-                        if item.Name == TargetItemName then item.Handle.CFrame = Character.HumanoidRootPart.CFrame 
-                        else item:Destroy() end
+                        if item.Name == TargetItemName then 
+                            item.Handle.CFrame = rootCFrame 
+                        else 
+                            item:Destroy() 
+                        end
                     end
                 end
 
-                timeout = timeout + 1
-                task.wait() -- HIZ LİMİTİ KALDIRILDI!
+                task.wait() -- Oyun motorunun izin verdiği maksimum döngü hızı
             end
             DupeInProgress = false
+            print("[EMLOXA WARE] Dupe Process Stopped/Finished.")
         end)
     end)
     DupeTab:CreateButton("Stop Dupe Process", function() DupeInProgress = false end)
