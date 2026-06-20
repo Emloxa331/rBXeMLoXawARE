@@ -136,8 +136,8 @@ function GameModule:Init(Window)
                     break 
                 end
 
-                local galaxy = ReplicatedStorage:FindFirstChild("SpawnGalaxyBlock")
-                if galaxy then galaxy:FireServer() end
+                local Rainbow = ReplicatedStorage:FindFirstChild("SpawnRainbowBlock")
+                if Rainbow then Rainbow:FireServer() end
 
                 for _, item in pairs(LocalPlayer.Backpack:GetChildren()) do
                     if item:IsA("Tool") then
